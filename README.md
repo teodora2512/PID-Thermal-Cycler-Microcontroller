@@ -19,13 +19,53 @@ Acest proiect reprezintă un sistem avansat de control al temperaturii, implemen
 
 | Componentă | Pin Arduino | Detalii |
 | :--- | :--- | :--- |
-| **Senzor LM35** | A0 | Senzor analogic (10mV/°C) |
-| **Heater (Bec/Rezistență)** | D10 | Comandă PWM prin tranzistor MOSFET |
-| **LCD 16x2 I2C** | SDA/SCL | Adresa I2C: 0x27 |
 | **Buton OK** | D6 | Selectare / Activare Perturbații |
 | **Buton CANCEL** | D7 | Ieșire / Hard Reset la pornire |
 | **Buton PREV** | D8 | Navigare înapoi / Scădere valoare |
 | **Buton NEXT** | D9 | Navigare înainte / Creștere valoare |
+
+## 🧱 Arhitectura Hardware și Selecția Componentelor
+
+Sistemul a fost proiectat utilizând componente de grad industrial pentru a asigura stabilitatea buclei de control și fiabilitatea pe termen lung a actuatorilor.
+
+### 🔌 Subsistemul de Putere și Execuție
+* **Tranzistor MOSFET N-Channel MagnaChip MDP10N055:** Elementul central de comutație, ales pentru specificațiile sale superioare: tensiune de operare de până la **100V** și o capacitate de curent impresionantă de **130A**. Cu o putere disipată de **188W** în capsulă **TO-220**, acesta permite controlul PWM de înaltă frecvență fără pierderi termice semnificative, asigurând o modulare fină a energiei către elementul de încălzire.
+* **Sursă de tensiune industrială Schneider Electric (12V):** Utilizată pentru alimentarea ramurii de putere, această sursă garantează un curent stabil, eliminând fluctuațiile de tensiune care ar putea introduce perturbații în calculul componentei derivative a algoritmului PID.
+* **Conectori Terminali cu Șurub (High-Current):** Pentru a minimiza rezistența de contact și a preveni degradarea termică a conexiunilor la curenți mari, s-au utilizat terminale cu șurub dedicate, asigurând un transfer de energie sigur și eficient.
+
+### 🎯 Subsistemul de Monitorizare și Interfațare
+* **Senzor de Temperatură de Precizie LM35 (OKY3066-2):** Un traductor analogic cu calibrare liniară de **10 mV/°C**. Alegerea acestui senzor permite o rezoluție ridicată în procesul de achiziție de date, facilitând o monitorizare constantă în plaja 4-30V, esențială pentru stabilitatea referinței mobile în etapele de rampă.
+* **Interfață Vizuală LCD 1602 Character Display (Deep Blue):** Ecranul monocrom cu fundal albastru și 16x2 caractere oferă un contrast ridicat pentru monitorizarea parametrilor critici. Prin integrarea protocolului de comunicare **I2C**, am optimizat resursele microcontrolerului, utilizând doar magistrala serială de date pentru o gestiune eficientă a afișajului.
+* **Unitate de Procesare Arduino Uno R3 (SMD Edition):** Platforma de calcul bazată pe procesorul ATmega328P, responsabilă pentru eșantionarea datelor de la senzor la intervale de milisecunde și execuția logicii de control în timp real.
+
+---
+
+## 💻 Arhitectură Software: Matricea de Pointeri la Funcții
+
+O particularitate avansată a acestui proiect este implementarea interfeței cu utilizatorul (UI) printr-o **Matrice de Pointeri la Funcții**, o metodă superioară din punct de vedere algoritmic față de structurile clasice de control.
+
+
+
+### Concepte Avansate Implementate:
+1.  **Gestiunea Evenimentelor prin State Machine:**
+    Am definit o matrice bidimensională de tip `state_machine_handler_t`, unde indexarea se face pe baza stării curente a meniului și a evenimentului declanșat de utilizator (buton apăsat).
+    
+    ```cpp
+    // Apelul dinamic al funcției specifice stării
+    if (sm[menu][ev] != 0) sm[menu][ev]();
+    ```
+
+2.  **Modularitate și Decuplare:**
+    Această arhitectură permite separarea completă a logicii de navigare de logica de execuție a procesului termic. Adăugarea unei noi funcționalități în meniu nu necesită modificarea algoritmului principal, ci doar extinderea matricei de pointeri.
+
+3.  **Optimizarea Memoriei și a Vitezei:**
+    Spre deosebire de un lanț lung de instrucțiuni `if-else` care ar fi evaluat secvențial, accesarea unei funcții prin pointer se realizează în **timp constant O(1)**, asigurând o latență minimă între interacțiunea utilizatorului și răspunsul sistemului.
+
+---
+
+## 🛡️ Siguranță și Stabilitate
+* **Filtrare Digitală:** Citirile de la LM35 trec printr-un proces de mediere pentru a elimina zgomotul alb de pe linia analogică.
+* **Anti-Windup Integral:** Am implementat limitarea matematică a termenului integral pentru a preveni fenomenul de saturație, asigurând o revenire rapidă a controlului în cazul unor perturbații externe majore.
 
 ---
 
